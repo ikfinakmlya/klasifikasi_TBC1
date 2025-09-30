@@ -3,37 +3,34 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-# coba import LeakyReLU dari keras
-try:
-    from keras.layers import LeakyReLU
-except:
-    from keras.layers import LeakyReLU
-
-# fungsi load model dengan fallback
+# load model aman
+@st.cache_resource
 def load_model_safe():
     model = None
     try:
-        # coba load h5 dengan custom_objects
-        model = tf.keras.models.load_model(
-            "model_tbc.h5",
-            custom_objects={"LeakyReLU": LeakyReLU}
-        )
-        st.success("Model berhasil dimuat dari model_tbc.h5")
+        # coba load format .keras (recommended di Keras 3)
+        model = tf.keras.models.load_model("model_tbc.keras")
+        st.success("✅ Model berhasil dimuat dari model_tbc.keras")
     except Exception as e1:
-        st.warning(f"Gagal load .h5 → {e1}")
+        st.warning(f"Gagal load .keras → {e1}")
         try:
-            # fallback: coba load SavedModel folder
-            model = tf.keras.models.load_model("model_tbc")
-            st.success("Model berhasil dimuat dari folder model_tbc/")
+            # fallback: coba load legacy H5
+            from keras.layers import LeakyReLU  # import untuk custom layer
+            model = tf.keras.models.load_model(
+                "model_tbc.h5",
+                custom_objects={"LeakyReLU": LeakyReLU}
+            )
+            st.success("✅ Model berhasil dimuat dari model_tbc.h5")
         except Exception as e2:
-            st.error(f"Gagal load model: {e2}")
+            st.error(f"❌ Gagal load model: {e2}")
     return model
 
-# load model
+# panggil load model
 model = load_model_safe()
 class_labels = ["Normal", "TBC"]
 
-st.title("Klasifikasi X-Ray TBC vs Normal")
+# judul app
+st.title("🩻 Klasifikasi X-Ray TBC vs Normal")
 
 # upload file
 uploaded_file = st.file_uploader("Upload Gambar X-Ray", type=["jpg", "png", "jpeg"])
@@ -54,6 +51,6 @@ if uploaded_file is not None and model is not None:
     confidence = np.max(pred)
 
     # hasil
-    st.subheader("Hasil Prediksi")
+    st.subheader("🔍 Hasil Prediksi")
     st.write(f"👉 **{class_labels[pred_class]}**")
     st.write(f"Tingkat keyakinan: **{confidence:.2f}**")
