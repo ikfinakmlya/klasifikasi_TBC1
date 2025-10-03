@@ -20,12 +20,17 @@ if not os.path.exists("model_tbc"):
 # Fungsi load model aman
 # =============================
 @st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("model_tbc.keras")
-
-        st.success("✅ Model berhasil dimuat dari folder model_tbc/")
+def load_model_safe():
+    model = None
+    try:
+        # coba load .keras
+        model = tf.keras.models.load_model(
+            "model_tbc.keras",
+            custom_objects={"LeakyReLU": LeakyReLU}
+        )
+        st.success("✅ Model berhasil dimuat dari model_tbc.keras")
     except Exception as e1:
-        st.warning(f"Gagal load folder model_tbc → {e1}")
+        st.warning(f"Gagal load .keras → {e1}")
         try:
             # fallback ke .h5
             model = tf.keras.models.load_model(
@@ -34,15 +39,7 @@ def load_model():
             )
             st.success("✅ Model berhasil dimuat dari model_tbc.h5")
         except Exception as e2:
-            try:
-                # fallback ke .keras
-                model = tf.keras.models.load_model(
-                    "model_tbc.keras",
-                    custom_objects={"LeakyReLU": LeakyReLU}
-                )
-                st.success("✅ Model berhasil dimuat dari model_tbc.keras")
-            except Exception as e3:
-                st.error(f"❌ Gagal load model: {e3}")
+            st.error(f"❌ Gagal load model: {e2}")
     return model
 
 # =============================
@@ -74,7 +71,7 @@ if uploaded_file is not None and model is not None:
     pred = model.predict(img_array)
 
     # handle sigmoid (1 neuron) atau softmax (2 neuron)
-    if pred.shape[1] == 1:  
+    if pred.shape[1] == 1:
         prob_tbc = float(pred[0][0])
         prob_normal = 1 - prob_tbc
         label = "TBC" if prob_tbc > 0.5 else "Normal"
