@@ -11,18 +11,17 @@ model = load_model()
 class_labels = ["Normal", "TBC"]
 
 st.title("🩻 Klasifikasi Citra X-Ray TBC vs Normal")
-uploaded_file = st.file_uploader("Upload Gambar X-Ray", type=["jpg", "jpeg", "png"])
 
+uploaded_file = st.file_uploader("Upload Gambar X-Ray", type=["jpg","jpeg","png"])
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Gambar diupload", use_container_width=True)
 
-    img_resized = image.resize((64, 64))
-    img_array = np.array(img_resized) / 255.0
+    img = image.resize((64,64))
+    img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     pred = model.predict(img_array)
-
     pred_class = np.argmax(pred, axis=1)[0]
     confidence = np.max(pred)
 
