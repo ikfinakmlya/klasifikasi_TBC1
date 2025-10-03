@@ -1,49 +1,74 @@
 import streamlit as st
 import tensorflow as tf
-from keras.layers import LeakyReLU 
 import numpy as np
-from tensorflow.keras.preprocessing import image
+from keras.layers import LeakyReLU
 from PIL import Image
 
-# Load model (.keras)
-@st.cache_resource  # supaya model cuma diload sekali
-def load_model():
-    return tf.keras.models.load_model("model_tbc.keras")
+# =============================
+# Fungsi load model aman
+# =============================
+@st.cache_resource
+def load_model_safe():
+    model = None
+    try:
+        # coba load H5 (lebih kompatibel di Keras 3)
+        model = tf.keras.models.load_model(
+            "model_tbc.h5",
+            custom_objects={"LeakyReLU": LeakyReLU}
+        )
+        st.success("✅ Model berhasil dimuat dari model_tbc.h5")
+    except Exception as e1:
+        st.warning(f"Gagal load .h5 → {e1}")
+        try:
+            # fallback ke format .keras
+            model = tf.keras.models.load_model(
+                "model_tbc.keras",
+                custom_objects={"LeakyReLU": LeakyReLU}
+            )
+            st.success("✅ Model berhasil dimuat dari model_tbc.keras")
+        except Exception as e2:
+            st.error(f"❌ Gagal load model: {e2}")
+    return model
 
-model = load_model()
+# =============================
+# Load model
+# =============================
+model = load_model_safe()
 class_labels = ["Normal", "TBC"]
 
-# Judul Aplikasi
+# =============================
+# UI Streamlit
+# =============================
 st.title("🩻 Klasifikasi Citra X-Ray TBC vs Normal")
 st.write("Upload gambar X-ray untuk mendeteksi apakah termasuk **TBC** atau **Normal**.")
 
 # Upload file
 uploaded_file = st.file_uploader("📤 Upload gambar X-ray (jpg/png)", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
-    # Tampilkan gambar
-    img = Image.open(uploaded_file).convert("RGB")
-    st.image(img, caption="Gambar diupload", use_container_width=True)
+if uploaded_file is not None and model is not None:
+    # tampilkan gambar
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Gambar diupload", use_container_width=True)
 
-    # Preprocessing
-    img_resized = img.resize((64, 64))  # sesuai input model
+    # preprocessing
+    img_resized = image.resize((64, 64))  # ukuran sesuai input
     img_array = np.array(img_resized) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # tambah dimensi batch
+    img_array = np.expand_dims(img_array, axis=0)
 
-    # Prediksi
-    prediction = model.predict(img_array)
+    # prediksi
+    pred = model.predict(img_array)
 
-    # Handle sigmoid (1 output neuron) atau softmax (2 output neuron)
-    if prediction.shape[1] == 1:
-        prob_tbc = float(prediction[0][0])
+    # handle sigmoid (1 neuron) atau softmax (2 neuron)
+    if pred.shape[1] == 1:  
+        prob_tbc = float(pred[0][0])
         prob_normal = 1 - prob_tbc
         label = "TBC" if prob_tbc > 0.5 else "Normal"
         confidence = max(prob_tbc, prob_normal)
     else:
-        pred_class = np.argmax(prediction, axis=1)[0]
+        pred_class = np.argmax(pred, axis=1)[0]
         label = class_labels[pred_class]
-        confidence = np.max(prediction)
+        confidence = np.max(pred)
 
-    # Hasil
+    # hasil
     st.subheader("🔍 Hasil Prediksi")
     st.write(f"👉 **{label}** (Keyakinan: {confidence:.2f})")
