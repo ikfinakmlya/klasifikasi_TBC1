@@ -3,6 +3,18 @@ import tensorflow as tf
 import numpy as np
 from keras.layers import LeakyReLU
 from PIL import Image
+import os, zipfile
+
+# =============================
+# Ekstrak model.zip jika perlu
+# =============================
+if not os.path.exists("model_tbc"):
+    if os.path.exists("model_tbc.zip"):
+        with zipfile.ZipFile("model_tbc.zip", "r") as zip_ref:
+            zip_ref.extractall(".")
+        st.info("📦 model_tbc.zip berhasil diekstrak.")
+    else:
+        st.error("❌ model_tbc.zip tidak ditemukan!")
 
 # =============================
 # Fungsi load model aman
@@ -11,23 +23,28 @@ from PIL import Image
 def load_model_safe():
     model = None
     try:
-        # coba load H5 (lebih kompatibel di Keras 3)
-        model = tf.keras.models.load_model(
-            "model_tbc.h5",
-            custom_objects={"LeakyReLU": LeakyReLU}
-        )
-        st.success("✅ Model berhasil dimuat dari model_tbc.h5")
+        # coba load dari folder SavedModel
+        model = tf.keras.models.load_model("model_tbc")
+        st.success("✅ Model berhasil dimuat dari folder model_tbc/")
     except Exception as e1:
-        st.warning(f"Gagal load .h5 → {e1}")
+        st.warning(f"Gagal load folder model_tbc → {e1}")
         try:
-            # fallback ke format .keras
+            # fallback ke .h5
             model = tf.keras.models.load_model(
-                "model_tbc.keras",
+                "model_tbc.h5",
                 custom_objects={"LeakyReLU": LeakyReLU}
             )
-            st.success("✅ Model berhasil dimuat dari model_tbc.keras")
+            st.success("✅ Model berhasil dimuat dari model_tbc.h5")
         except Exception as e2:
-            st.error(f"❌ Gagal load model: {e2}")
+            try:
+                # fallback ke .keras
+                model = tf.keras.models.load_model(
+                    "model_tbc.keras",
+                    custom_objects={"LeakyReLU": LeakyReLU}
+                )
+                st.success("✅ Model berhasil dimuat dari model_tbc.keras")
+            except Exception as e3:
+                st.error(f"❌ Gagal load model: {e3}")
     return model
 
 # =============================
