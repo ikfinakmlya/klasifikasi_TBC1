@@ -20,11 +20,9 @@ if not os.path.exists("model_tbc"):
 # Fungsi load model aman
 # =============================
 @st.cache_resource
-def load_model_safe():
-    model = None
-    try:
-        # coba load dari folder SavedModel
-        model = tf.keras.models.load_model("model_tbc")
+def load_model():
+    return tf.keras.models.load_model("model_tbc.keras")
+
         st.success("✅ Model berhasil dimuat dari folder model_tbc/")
     except Exception as e1:
         st.warning(f"Gagal load folder model_tbc → {e1}")
