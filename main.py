@@ -1,51 +1,17 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-from keras.layers import LeakyReLU
 from PIL import Image
-import os, zipfile
 
 # =============================
-# Ekstrak model.zip jika perlu
-# =============================
-if not os.path.exists("model_tbc"):
-    if os.path.exists("model_tbc.zip"):
-        with zipfile.ZipFile("model_tbc.zip", "r") as zip_ref:
-            zip_ref.extractall(".")
-        st.info("📦 model_tbc.zip berhasil diekstrak.")
-    else:
-        st.error("❌ model_tbc.zip tidak ditemukan!")
-
-# =============================
-# Fungsi load model aman
+# Fungsi load model
 # =============================
 @st.cache_resource
-def load_model_safe():
-    model = None
-    try:
-        # coba load .keras
-        model = tf.keras.models.load_model(
-            "model_tbc.keras",
-            custom_objects={"LeakyReLU": LeakyReLU}
-        )
-        st.success("✅ Model berhasil dimuat dari model_tbc.keras")
-    except Exception as e1:
-        st.warning(f"Gagal load .keras → {e1}")
-        try:
-            # fallback ke .h5
-            model = tf.keras.models.load_model(
-                "model_tbc.h5",
-                custom_objects={"LeakyReLU": LeakyReLU}
-            )
-            st.success("✅ Model berhasil dimuat dari model_tbc.h5")
-        except Exception as e2:
-            st.error(f"❌ Gagal load model: {e2}")
-    return model
+def load_model():
+    return tf.keras.models.load_model("model_tbc.keras")
 
-# =============================
-# Load model
-# =============================
-model = load_model_safe()
+# load model
+model = load_model()
 class_labels = ["Normal", "TBC"]
 
 # =============================
@@ -57,20 +23,20 @@ st.write("Upload gambar X-ray untuk mendeteksi apakah termasuk **TBC** atau **No
 # Upload file
 uploaded_file = st.file_uploader("📤 Upload gambar X-ray (jpg/png)", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None and model is not None:
+if uploaded_file is not None:
     # tampilkan gambar
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Gambar diupload", use_container_width=True)
 
     # preprocessing
-    img_resized = image.resize((64, 64))  # ukuran sesuai input
+    img_resized = image.resize((64, 64))  # ukuran sesuai input model
     img_array = np.array(img_resized) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     # prediksi
     pred = model.predict(img_array)
 
-    # handle sigmoid (1 neuron) atau softmax (2 neuron)
+    # handle sigmoid (1 output neuron) atau softmax (2 output neuron)
     if pred.shape[1] == 1:
         prob_tbc = float(pred[0][0])
         prob_normal = 1 - prob_tbc
